@@ -2,6 +2,8 @@ from flask import Flask, render_template, request
 from datetime import datetime, timedelta
 from flask_mysqldb import MySQL
 
+# Endereço raiz do shortlink
+root_link = 'http://localhost:5000'
 
 app = Flask(__name__)
 
@@ -46,8 +48,8 @@ def admin():
 
     sql = '''
         SELECT id, name, link, short, views,
-            DATE_FORMAT(date, '%%d/%%m/%%Y %%H:%%i') AS datebr,
-            DATE_FORMAT(expire, '%%d/%%m/%%Y %%H:%%i') AS expirebr
+            DATE_FORMAT(date, '%d/%m/%Y %H:%i') AS datebr,
+            DATE_FORMAT(expire, '%d/%m/%Y %H:%i') AS expirebr
         FROM shortenpy
         WHERE status = 'on'
         ORDER BY name, short, date DESC, expire DESC;
@@ -55,10 +57,16 @@ def admin():
     cur = mysql.connection.cursor()
     cur.execute(sql)
     shortlinks = cur.fetchall()
+    cur.close()
 
     print('\n\n\n', shortlinks, '\n\n\n')
 
-    return render_template('admin.html')
+    page = {
+        'root_link': root_link,
+        'shortlinks': shortlinks
+    }
+
+    return render_template('admin.html', page=page)
 
 
 @app.route('/new', methods=['GET', 'POST'])
