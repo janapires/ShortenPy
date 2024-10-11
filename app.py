@@ -32,19 +32,90 @@ def before_request():
     cur.execute("SET lc_time_names = 'pt_BR'")
     cur.close()
 
-
-@app.route('/<short>')
+@app.route('/<short>')  # Rota principal que recebe um parâmetro 'short'
 def home(short):
-    return f"Vamos para {short}"
 
+    sql = '''
+        SELECT link
+        FROM shortenpy
+        WHERE short = %s AND status = 'on';
+    '''
+    cur = mysql.connection.cursor()
+    cur.execute(sql, (short,))
+    link = cur.fetchone()
+    cur.close()
 
-@app.route('/edit/<id>')
+    print('\n\n\n', link, '\n\n\n')
+
+    if link == None:
+        return page_not_found(404)
+
+    return shortenpyect(link['link'])
+
+# Rota para editar um registro com base no 'id'
+@app.route('/edit/<id>', methods=['GET', 'POST'])
 def edit(id):
-    return f'Editando {id}'
+
+    if request.method == 'POST':
+        form = dict(request.form)
+        # print('\n\n\n', form, '\n\n\n')
+        sql = '''
+            UPDATE shortenpy SET
+                name = %s,
+                link = %s,
+                short = %s,
+                expire = %s
+            WHERE id = %s
+                AND status = 'on'
+       '''
+        # print('\n\n\n', sql, '\n\n\n')
+        cur = mysql.connection.cursor()
+        cur.execute(sql, (form['name'], form['link'], form['short'], form['expire'], id, ))
+        mysql.connection.commit()
+        cur.close()
+
+    sql = '''
+        SELECT * 
+        FROM `shortenpy` 
+        WHERE `id` = %s
+            AND status = 'on';
+    '''
+    cur = mysql.connection.cursor()
+    cur.execute(sql, (id,))
+    link = cur.fetchone()
+    cur.close()
+
+    if link == None:
+        page_not_found(404)
+
+    # print('\n\n\n', link, '\n\n\n')
+
+    page = {
+        'link': link
+    }
+
+    return render_template('edit.html', page=page)
+
+
+@app.route('/del/<id>')  # Rota para deletar um registro com base no 'id'
+def delete(id):
+
+    sql = '''
+        UPDATE shortenpy SET status = 'del'
+        WHERE id = %s
+    '''
+    cur = mysql.connection.cursor()
+    cur.execute(sql, (id,))
+    mysql.connection.commit()
+    cur.close()
+
+    return shortenpyect(url_for('admin', action='del'))
 
 
 @app.route('/admin')
 def admin():
+
+    action = request.args.get('action')
 
     sql = '''
         SELECT id, name, link, short, views,
@@ -63,7 +134,8 @@ def admin():
 
     page = {
         'root_link': root_link,
-        'shortlinks': shortlinks
+        'shortlinks': shortlinks,
+        'action': action
     }
 
     return render_template('admin.html', page=page)
