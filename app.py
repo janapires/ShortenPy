@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, url_for
 from datetime import datetime, timedelta
 from flask_mysqldb import MySQL
 
@@ -50,7 +50,7 @@ def home(short):
     if link == None:
         return page_not_found(404)
 
-    return shortenpyect(link['link'])
+    return shortenpyect(link['link']) # type: ignore
 
 # Rota para editar um registro com base no 'id'
 @app.route('/edit/<id>', methods=['GET', 'POST'])
@@ -109,7 +109,7 @@ def delete(id):
     mysql.connection.commit()
     cur.close()
 
-    return shortenpyect(url_for('admin', action='del'))
+    return shortenpyect(url_for('admin', action='del')) # type: ignore
 
 
 @app.route('/admin')
