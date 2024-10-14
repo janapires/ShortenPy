@@ -143,53 +143,53 @@ def admin():
 
 @app.route('/new', methods=['GET', 'POST'])
 def new():
+    sended = False  # Variável para indicar se o formulário foi enviado com sucesso
+    error = False   # Variável para indicar se houve um erro
 
-    sended = False
-    error = False
-
-    if request.method == 'POST':  # Processa formulário enviado
+    if request.method == 'POST':  # Processa o formulário enviado
+        # Converte os dados do formulário para um dicionário
         form = dict(request.form)
 
-        # print('\n\n\n', form, '\n\n\n')
-
+        # Consulta SQL para verificar se já existe um shortlink com o mesmo nome ou short
         sql = '''
             SELECT COUNT(id) AS total FROM shortenpy
             WHERE (name = %s OR short = %s)
                 AND status = 'on' AND expire > NOW();
         '''
-        cur = mysql.connection.cursor()
+        cur = mysql.connection.cursor()  # Cria um cursor para executar a consulta
+        # Executa a consulta com os parâmetros do formulário
         cur.execute(sql, (form['name'], form['short'],))
-        total = cur.fetchone()
+        total = cur.fetchone()  # Obtém o resultado da consulta
 
-        # print('\n\n\n', total['total'], '\n\n\n')
-
-        if int(total['total']) > 0:
-            error = True
-
+        if int(total['total']) > 0:  # Verifica se já existe um shortlink com o mesmo nome ou short
+            error = True  # Define a variável de erro como True
         else:
-
+            # Consulta SQL para inserir um novo shortlink
             sql = '''
                 INSERT INTO shortenpy (name, link, short, expire)
                 VALUES (%s, %s, %s, %s)
             '''
+            # Executa a consulta de inserção
             cur.execute(sql, (form['name'], form['link'],
-                        form['short'], form['expire'],))
-            mysql.connection.commit()
+                              form['short'], form['expire'],))
+            mysql.connection.commit()  # Confirma a transação no banco de dados
+            sended = True  # Define a variável de sucesso como True
 
-            sended = True
+        cur.close()  # Fecha o cursor
 
-        cur.close()
-
-    data_atual = datetime.now()                             # Data atual
-    data_futura = data_atual + timedelta(days=365)          # Adicionando 1 ano
-    one_year = data_futura.strftime("%Y-%m-%d %H:%M:%S")    # Formatando a data
+    data_atual = datetime.now()  # Obtém a data e hora atuais
+    # Calcula a data futura adicionando 1 ano
+    data_futura = data_atual + timedelta(days=365)
+    one_year = data_futura.strftime(
+        "%Y-%m-%d %H:%M:%S")  # Formata a data futura
 
     page = {
-        'expire_sugest': one_year,
-        'sended': sended,
-        'error': error
+        'expire_sugest': one_year,  # Sugestão de data de expiração
+        'sended': sended,  # Indica se o formulário foi enviado com sucesso
+        'error': error  # Indica se houve um erro
     }
 
+    # Renderiza o template 'new.html' com os dados da página
     return render_template('new.html', page=page)
 
 
@@ -203,5 +203,6 @@ def page_not_found(e):
     return 'Oooops! Erro 404', 404
 
 
+# Roda o servidor de desenvolvimento local
 if __name__ == '__main__':
     app.run(debug=True)
